@@ -7,10 +7,10 @@ import re
 import time
 import os
 import threading
-from flask import Flask  # Ditambahkan untuk menipu port Render
+from flask import Flask
 
 # =====================================================================
-# ⚙️ PEMBUATAN SERVER WEB MINI (Agar Bisa Gratis di Render Web Service)
+# ⚙️ SERVER WEB MINI (Agar Bisa Gratis di Render Web Service)
 # =====================================================================
 app = Flask(__name__)
 
@@ -37,7 +37,7 @@ def dapatkan_topik_viral_dan_data_pasar():
         respon = requests.get("https://cointelegraph.com/rss/tag/altcoin", headers=HEADERS, timeout=10)
         titles = re.findall(r'<title><!\[CDATA\[(.*?)\]\]></title>', respon.text)
         berita_gabungan = " ".join(titles[:5]) if titles else "AI, TON Ecosystem, DeFi Layer 2"
-    except Exception as e:
+    except Exception:
         berita_gabungan = "TON Network expansion, Telegram Mini Apps, AI Automated Agents"
     return f"Narasi viral hari ini: {berita_gabungan}."
 
@@ -54,13 +54,13 @@ def generate_target_usernames():
 def cek_ketersediaan_satu_username(username):
     url_cek = f"https://fragment.com/username/{username}"
     try:
-        time.sleep(0.2) # Jeda mikro agar ramah anti-bot
+        time.sleep(0.2)
         respon_web = requests.get(url_cek, headers=HEADERS, timeout=7)
         if respon_web.status_code == 200 and ("Available" in respon_web.text or "An auction" in respon_web.text):
             return username, "HIJAU"
         else:
             return username, "MERAH"
-    except:
+    except Exception:
         return username, "ERROR"
 
 def jalankan_super_agent_maksimal():
@@ -79,7 +79,7 @@ def jalankan_super_agent_maksimal():
                 if status == "HIJAU":
                     username_kosong_terpilih.append(nama)
                     print(f"  [{index}/{total_nama}] 🟢 KOSONG: @{nama}")
-            except:
+            except Exception:
                 pass
 
     if not username_kosong_terpilih:
@@ -102,11 +102,15 @@ def jalankan_super_agent_maksimal():
             messages=[{"role": "user", "content": prompt_analisis}]
         )
         teks_jawaban = respon_ai.choices[0].message.content
+        
         if "```json" in teks_jawaban:
-            teks_jawaban = teks_jawaban.split("
-```json")[1].split("```")[0].strip()
-        rekomendasi_final = json.loads(teks_jawaban)
+            teks_jawaban = teks_jawaban.split("```json")[1].split("```")[0].strip()
+        elif "```" in teks_jawaban:
+            teks_jawaban = teks_jawaban.split("```")[1].split("```")[0].strip()
+            
+        rekomendasi_final = json.loads(teks_jawaban.strip())
     except Exception as e:
+        print(f"⚠️ Gagal parsing AI ({e}), mengaktifkan mode aman.")
         rekomendasi_final = [{"username": username_kosong_terpilih[0], "alasan": "Struktur utilitas tinggi.", "audiens": "Whale Investor"}]
 
     keranjang_excel = []
@@ -120,15 +124,15 @@ def jalankan_super_agent_maksimal():
             "Status Kelangkaan": "Tersedia",
             "Analisis Komersial AI": alasan_fix,
             "Estimasi Target Pembeli": audiens_fix,
-            "Link Jual Langsung": f"[https://fragment.com/username/](https://fragment.com/username/){nama_fix}"
+            "Link Jual Langsung": f"https://fragment.com/username/{nama_fix}"
         })
 
     df_hasil = pd.DataFrame(keranjang_excel)
     df_hasil.to_excel("Harta_Karun_Fragment_Harian.xlsx", index=False)
-    print(f"\n💾 SUKSES! File lokal diperbarui.")
+    print("💾 SUKSES! File laporan diperbarui.")
 
 # =====================================================================
-# 🔄 LOOP UTAMA AGENT (Berjalan di Thread Terpisah)
+# 🔄 LOOP UTAMA AGENT
 # =====================================================================
 def loop_pemburu_otomatis():
     print("🚀 MESIN PEMBURU FRAGMENT OTOMATIS AKTIF DI BACKGROUND...")
@@ -143,9 +147,6 @@ def loop_pemburu_otomatis():
         time.sleep(MENIT_JEDA * 60)
 
 if __name__ == "__main__":
-    # Jalankan bot pemburu di thread terpisah agar tidak memblokir Flask
     threading.Thread(target=loop_pemburu_otomatis, daemon=True).start()
-    
-    # Jalankan Flask Server di Port yang diminta oleh Render
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
